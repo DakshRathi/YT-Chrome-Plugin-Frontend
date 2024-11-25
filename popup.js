@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const outputDiv = document.getElementById("output");
-  const API_KEY = 'ENTER_YOUR_API_KEY';
-  const API_URL = 'http://127.0.0.1:8000';
+  const YT_API_KEY = 'ENTER_YOUR_API_KEY'; // Replace with your API key
+  const API_URL = 'http://yt-plugin-elb-2016020879.eu-north-1.elb.amazonaws.com'; // Replace with your localhost URL running docker image
 
   // Get the current tab's URL
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -19,10 +19,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      outputDiv.innerHTML += `<p>Fetched ${comments.length} comments. Performing sentiment analysis...</p>`;
+      // Remove "Fetching comments..." and show the number of comments fetched
+      outputDiv.innerHTML = `<div class="section-title">YouTube Video ID</div><p>${videoId}</p><p>Fetched ${comments.length} comments. Performing sentiment analysis...</p>`;
+      
       const predictions = await getSentimentPredictions(comments);
 
       if (predictions) {
+        // Remove "Performing sentiment analysis..." after analysis is complete
+        outputDiv.innerHTML = `<div class="section-title">YouTube Video ID</div><p>${videoId}</p><p>Fetched ${comments.length} comments. Sentiment analysis completed.</p>`;
+        
         // Process the predictions to get sentiment counts and sentiment data
         const sentimentCounts = { "1": 0, "0": 0, "-1": 0 };
         const sentimentData = []; // For trend graph
@@ -114,12 +119,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Fetch and display the word cloud inside the wordcloud-container div
         await fetchAndDisplayWordCloud(comments);
 
+        // Add a section for AI-generated Summary directly
+        outputDiv.innerHTML += `
+        <div class="section">
+          <div class="section-title">AI Generated Summary</div>
+          <div id="summary-output" class="summary-section">
+            <p>Generating summary...</p>
+          </div>
+        </div>
+        `;
+
+        // Generate the AI summary and update the summary section
+        const summaryOutputDiv = document.getElementById("summary-output");
+
+        if (summaryOutputDiv) {
+        try {
+          const summary = await generateSummary(comments);
+          
+          // Hide the "Generating summary..." text
+          summaryOutputDiv.innerHTML = `<p>${summary}</p>`;
+        } catch (error) {
+          summaryOutputDiv.innerHTML = `<p>Error generating summary. Please try again.</p>`;
+          console.error("Error generating summary:", error);
+        }
+        } else {
+        console.error("Summary output div not found!");
+        }
         // Add the top comments section
         outputDiv.innerHTML += `
           <div class="section">
-            <div class="section-title">Top 25 Comments with Sentiments</div>
+            <div class="section-title">Top 50 Comments with Sentiments</div>
             <ul class="comment-list">
-              ${predictions.slice(0, 25).map((item, index) => `
+              ${predictions.slice(0, 50).map((item, index) => `
                 <li class="comment-item">
                   <span>${index + 1}. ${item.comment}</span><br>
                   <span class="comment-sentiment">Sentiment: <span class="value">${item.sentiment}</span></span>
@@ -137,7 +168,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let pageToken = "";
     try {
       while (comments.length < 500) {
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=100&pageToken=${pageToken}&key=${API_KEY}`);
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=100&pageToken=${pageToken}&key=${YT_API_KEY}`);
         const data = await response.json();
         if (data.items) {
           data.items.forEach(item => {
@@ -218,6 +249,70 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById('wordcloud-container').appendChild(img);
     } catch (error) {
       console.error("Error fetching or displaying word cloud:", error);
+    }
+  }
+
+  // Function to fetch a summary using Google Gemini
+  async function generateSummary(comments) {
+    const apiKey = "ENTER_YOUR_API_KEY"; // Replace with your actual API key
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(`${API_URL}/process_comments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ comments })
+        });
+
+        if (!response.ok) {
+            throw new Error(`FastAPI Error (${response.status}): ${response.statusText}`);
+        }
+
+        const fastApiData = await response.json();
+        let processedComments = fastApiData.processed_comments;
+
+        // Step 1: Sanitize the comments by removing non-ASCII characters
+        processedComments = processedComments.replace(/[^\x00-\x7F]/g, "");
+
+        // Step 2: Ensure the length is within the API's token limits
+        const MAX_LENGTH = 2000;
+        const truncatedComments = processedComments.slice(0, MAX_LENGTH);
+
+        // Step 3: Format the prompt as per the curl example
+        const prompt = `
+            Analyze the overall sentiment (positive, neutral, or negative) and summarize the main themes expressed in these comments.
+            Comments:
+            ${truncatedComments}
+            Please provide a concise response in 5-10 sentences, highlighting any notable trends or recurring topics or points of improvement for creators.
+        `.trim();
+
+        // Step 4: Send the request to the LLM API in the correct format
+        const llmResponse = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: prompt
+                            }
+                        ]
+                    }
+                ]
+            }),
+        });
+
+        if (!llmResponse.ok) {
+          throw new Error(`LLM API Error (${llmResponse.status}): ${llmResponse.statusText}`);
+        }
+
+        const llmData = await llmResponse.json(); // Parse only once
+        console.log("LLM Response Data:", llmData);  // Log or handle the API response
+        return llmData?.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+    } catch (error) {
+        console.error("Error generating summary:", error);
+        return `Failed to generate summary. Error: ${error.message}`;
     }
   }
 });
