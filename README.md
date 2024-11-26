@@ -5,6 +5,7 @@ This Chrome extension allows users to analyze YouTube video comments directly fr
 # Table of Contents 📑
 
 - [Features](#features-)
+- [Demonstration](#demonstration-)
 -  [Installation](#installation-)
    - [Prerequisites](#prerequisites-)
    - [Steps](#steps-)
@@ -31,6 +32,9 @@ This Chrome extension allows users to analyze YouTube video comments directly fr
   - Word cloud visualization of comment keywords 🌐.
 - **AI-Generated Summary:** Summarizes recurring themes and feedback using LLM-powered APIs 🧠.
 - **Top Comments Display:** Highlights top 50 comments with their respective sentiments 💬.
+
+## Demonstration 🎥
+- Watch a video demonstration of the project [here](https://drive.google.com/file/d/1UTHbLKF0OUMFRKTS92f9uY2nt9AaHBLE/view?usp=sharing).
 
 ## Installation ⚙️
 
