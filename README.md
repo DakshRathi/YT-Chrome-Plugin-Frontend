@@ -6,7 +6,7 @@ This Chrome extension allows users to analyze YouTube video comments directly fr
 
 - [Features](#features-)
 - [Demonstration](#demonstration-)
--  [Installation](#installation-)
+- [Installation](#installation-)
    - [Prerequisites](#prerequisites-)
    - [Steps](#steps-)
 - [Usage](#usage-)
@@ -151,4 +151,4 @@ This project is licensed under the MIT License.
 
 ## Author 👨‍💻
 
-Developed and maintained by **[Daksh Rathi]**.
+Developed and maintained by **Daksh Rathi**.
