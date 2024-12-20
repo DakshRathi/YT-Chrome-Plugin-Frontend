@@ -46,11 +46,11 @@ Ensure the following software is installed on your system:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/<your-username>/yt-comment-sentiment-extension.git
+   git clone https://github.com/DakshRathi/YT-Chrome-Plugin-Frontend.git
    ```
 2. Navigate to the project directory:
    ```bash
-   cd yt-comment-sentiment-extension
+   cd YT-Chrome-Plugin-Frontend
    ```
 3. Install dependencies for local testing:
    ```bash
